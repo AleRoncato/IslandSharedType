@@ -25,7 +25,6 @@ pub enum MoorResponse {
     NoBerth,
 }
 
-
 /// island's response to a repair_hull request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepairHullResponse {
@@ -37,7 +36,6 @@ pub enum RepairHullResponse {
     Wait(u32),
 }
 
-
 impl Display for IslandResponse{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self{
@@ -48,8 +46,6 @@ impl Display for IslandResponse{
         }
     }
 }
-
-
 
 impl Display for MoorResponse{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -104,16 +100,16 @@ pub trait Island {
     /// the method only checks the request against the island's policies and berth capacity; it does not check geometry constraints and other game rules.
     fn can_moor(&self, ship: ShipId) -> MoorResponse; // read-only method
 
+    // potrebbe essere ridondante dato che la chart conosce gia se la ship è moored in un isola, perche Chart conosce lo stato di ogni isola. E se l'isola è moored e in che isola c e scritto li
     fn is_moored(&self, ship: ShipId) -> bool;
 
     /// makes a moored ship to leave the berth
     /// this method is called by the chart **after** validating that the ship is actually moored.
     fn leave_berth(&mut self, ship: ShipId);  // using a result for eventual  panics that shouldnt but might happen
 
-
     fn ask_clue(&mut self, ship: ShipId) -> IslandResponse;
 
-    fn remaining_wait(&self, ship: ShipId) -> Option<u32>; // should just be u32 cuz it technically cannot be ever None
+    fn remaining_wait(&self, ship: ShipId) -> Option<u32>; // da rivedere perche cosa significa se ritorna None? Una nave non sta aspettando ed è straight up attraccata e basta? e Some(0)?
 
     fn has_more_to_offer(&self, ship: ShipId) -> bool;
 
@@ -121,12 +117,15 @@ pub trait Island {
 
     //Optional stuff that might be good to add
 
+    /// **TBD**
     fn repair_hull(&self, ship: ShipId) -> RepairHullResponse;
 
+    /// **TBD**
     fn ask_history(&self, ship: ShipId) -> Option<Vec<VisitRecord>>;
 }
 
 //optional struct for storing records of visits for each Ship
+/// **TBD**
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VisitRecord {
     pub ship: ShipId,
