@@ -1,39 +1,41 @@
 use crate::types::{Clue, Params, Round, Seed, ShipId};
 use std::fmt::{Display, Formatter};
 
-/// island's response to a clue request by a ship.
+/// How an island answers a request for its Clue.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IslandResponse {
-    /// pass an instance of the island's clue weakened or full.
+    /// The Island gives the Clue weakened or full.
     Respond(Clue),
-    /// The island refused to give the clue to the requesting ship due to the island's policies.
+    /// The Island declines to answer this Ship, according to its own policy.
     Refused,
-    /// The requesting ship has to wait at least n rounds before receiving a version of the clue.
+    /// The Ship must wait at least `n` more rounds before the Island answers.
     Wait(u32),
-    /// The requesting ship has already received the full strength clue.
+    /// The requesting Ship has already received the full-strength Clue.
     NothingMore,
 }
 
-/// island's response to a moor request.
+/// How an Island answers to a moor request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoorResponse {
-    /// The island approved the ship's mooring request.
+    /// The Island approves the Ship's mooring request.
     Accepted,
-    /// The island rejects the request due to its policies.
+    /// The Island rejects the request according to its policies.
     Refused,
-    /// The island rejects the request due to full berth.
+    /// The Island rejects the request due to full berth.
     NoBerth,
 }
 
 
-/// island's response to a repair_hull request.
+/// How an Island answer to a repair_hull request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepairHullResponse {
-    /// the island repairs the requesting ship's hull by 'h' hulls. To be discussed of whose responsibility is to check if old_hull + h > hull_max
+    /// the Island repairs `ship` by `h` hulls.
+    ///
+    /// To be discussed of whose responsibility is to check if old_hull + h > hull_max
     Accepted(u32),
-    /// request rejected due to island own policies.
+    /// The Island rejects the request according to its policies.
     Refused,
-    /// (n > 0) The ships has to wait at least n rounds to be repaired.
+    /// The Ship has to wait at least `(n > 0)` rounds to be repaired.
     Wait(u32),
 }
 
@@ -90,37 +92,53 @@ pub trait Island {
 
     fn new(init: IslandInit<'_>) -> Self; //Constructor, chart calls: Box::new(CertainIsland::new(init1));
 
-    /// **applies** a valid moor request
-    ///The chart calls this method to **apply** the moor request from Ship S to the Island I.
+    /// **Applies** a valid moor request
+    ///The chart calls this method to **apply** the moor request from `ship`
     ///
-    /// This must be called **after** the chart validates the request and only when the request is Approved against geometry rules and island policies.
+    /// This must be called **after** the chart validates the request and only when the request
+    /// is Accepted against geometry rules and island policies.
     ///
-    /// moor method mutates the island's state
+    /// moor method mutates the island's state by remembering `ship` being moored.
     fn moor(&mut self, ship: ShipId);
 
-    /// validates a moor request
-    /// this method is called by the Chart during the moor request's validation process.
+    /// Records that `ship` has moored here.
     ///
-    /// the method only checks the request against the island's policies and berth capacity; it does not check geometry constraints and other game rules.
+    /// Called by the Chart when applying a `Moor` action, immediately after
+    /// [`Island::can_moor`] returned [`MoorResponse::Accepted`] for the same ship
+    /// with no other call in between.
+    ///
+    /// Calling it without that precondition is a bug in the caller; the
+    /// behavior is then implementation-defined but must not panic.
     fn can_moor(&self, ship: ShipId) -> MoorResponse; // read-only method
 
     fn is_moored(&self, ship: ShipId) -> bool;
 
-    /// makes a moored ship to leave the berth
-    /// this method is called by the chart **after** validating that the ship is actually moored.
+    /// Frees the berth held by `ship`.
+    ///
+    /// The Chart calls this when a moored Ship leaves
+    /// and when a moored Ship sinks. If `ship` is not moored here,
+    /// this does nothing.
     fn leave_berth(&mut self, ship: ShipId);  // using a result for eventual  panics that shouldnt but might happen
 
-
+    /// Creates an [`IslandResponse`] for `ship` according to the Island policies.
+    ///
+    /// The Chart must call this method after checking whether `ship` is moored to Island.
     fn ask_clue(&mut self, ship: ShipId) -> IslandResponse;
 
+    /// Returns the number of rounds `ship` must wait to receive a Clue.
+    ///
+    /// Returns None if `ship` already has the full-strenght Clue.
     fn remaining_wait(&self, ship: ShipId) -> Option<u32>; // should just be u32 cuz it technically cannot be ever None
 
     fn has_more_to_offer(&self, ship: ShipId) -> bool;
 
+    ///Updates the Island round counter with `round`.
+    /// 
+    /// The Chart calls this method at the beginning of every round.
     fn round_advance(&mut self, round: Round); //Chart handles the global rounds and communicates them to the island through this function
 
     //Optional stuff that might be good to add
-
+    
     fn repair_hull(&self, ship: ShipId) -> RepairHullResponse;
 
     fn ask_history(&self, ship: ShipId) -> Option<Vec<VisitRecord>>;
