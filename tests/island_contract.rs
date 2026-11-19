@@ -8,7 +8,7 @@ use IslandSharedType::types::{Clue, Round, ShipId};
 struct MockIsland {
     clue: Clue,
     moored: Option<ShipId>,// per salvare informazioni sulla barca
-    served_full: HashSet<ShipId>,// per aggiungere le barche cha hanno preso la full clue
+    // served_full: HashSet<ShipId>,// per aggiungere le barche cha hanno preso la full clue
 }
 
 impl Island for MockIsland {
@@ -20,7 +20,7 @@ impl Island for MockIsland {
         Self {
             clue: init.clue,
             moored: None,
-            served_full: HashSet::new(),
+            // served_full: HashSet::new(),
         }
     }
     // registra effettivamente l'ormeggio
@@ -48,19 +48,18 @@ impl Island for MockIsland {
     }
 
     fn ask_clue(&mut self, ship: ShipId) -> IslandResponse {
-        if self.served_full(ship){
-            IslandResponse::Refused
-        }else{
-            IslandResponse::Respond(self.clue)
-        }
+        // if self.served_full(ship){
+        //     IslandResponse::Refused
+        // }else{
+        //     IslandResponse::Respond(self.clue)
+        // }
 
-        // IslandResponse::Respond(self.clue)
+        IslandResponse::Respond(self.clue)
     }
 
     fn remaining_wait(&self, _ship: ShipId) -> Option<u32> {
-        if IslandResponse::Respond()
+        None
     }
-
     fn has_more_to_offer(&self, _ship: ShipId) -> bool {
         true
     }
@@ -133,8 +132,8 @@ fn test_moor_lifecycle() {
     // Il posto torna disponibile
     assert_eq!(island.can_moor(2), MoorResponse::Accepted);
 }
-#[test]
-fn test_ask_clue(){
-
-}
+// #[test]
+// fn test_ask_clue(){
+//
+// }
 
