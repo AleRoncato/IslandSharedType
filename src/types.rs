@@ -1,3 +1,5 @@
+/// Mock types for testing
+
 pub type ShipId = u8;
 
 pub type Round = u32;
