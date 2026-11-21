@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use crate::types::{Clue, Params, Round, Seed, ShipId};
 use std::fmt::{Display, Formatter};
 
@@ -14,7 +15,7 @@ pub enum IslandResponse {
     NothingMore,
 }
 
-/// island's response to a moor request.
+/// How an Island answers to a moor request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoorResponse {
     /// The island approved the ship's mooring request.
@@ -30,9 +31,9 @@ pub enum MoorResponse {
 pub enum RepairHullResponse {
     /// the island repairs the requesting ship's hull by 'h' hulls. To be discussed of whose responsibility is to check if old_hull + h > hull_max
     Accepted(u32),
-    /// request rejected due to island own policies.
+    /// Request rejected due to Island's own policies.
     Refused,
-    /// (n > 0) The ships has to wait at least n rounds to be repaired.
+    /// The Ship has to wait at least n > 0 rounds to be repaired.
     Wait(u32),
 }
 
@@ -85,8 +86,7 @@ pub trait Island {
     /// # Note
     /// This method requires `Self: Sized` because it constructs a concrete Island type and cannot be called through a `dyn Island` trait object.
     fn new(init: IslandInit) -> Self where Self: Sized;
-
-    /// **applies** a valid moor request
+    /// **Applies** a valid moor request
     ///The chart calls this method to **apply** the moor request from Ship S to the Island I.
     ///
     /// The Chart calls this only after checking all applicable game rules, including [`Island::can_moor`], and immediately applying that validated action.
@@ -111,8 +111,9 @@ pub trait Island {
     /// WG TODO: The Chart already knows each Ship's mooring state; decide whether this query is necessary/useful in the trait.
     fn is_moored(&self, ship: ShipId) -> bool;
 
-    /// makes a moored ship leave the berth
-    /// this method is called by the chart **after** validating that the ship is actually moored.
+    /// Makes a moored ship leave the berth
+    ///
+    /// This method is called by the Chart **after** validating that the ship is actually moored.
     /// WG TODO: Define any additional call sites, e.g. a Ship sinking while moored, and the effect of departure on partial waiting progress.
     fn leave_berth(&mut self, ship: ShipId);
 
@@ -134,7 +135,8 @@ pub trait Island {
 
     /// Indicates whether the Island has a Clue improvement left for `ship`.
     ///
-    /// This must be `false` once the Ship has received this Island's original, full-strength Clue. Receiving only a weakened Clue does not, by itself, exhaust the Island's offer to that Ship.
+    /// This must be `false` once the Ship has received this Island's original, full-strength Clue.
+    /// Receiving only a weakened Clue does not, by itself, exhaust the Island's offer to that Ship.
     ///
     /// Read-only method.
     fn has_more_to_offer(&self, ship: ShipId) -> bool;
@@ -155,42 +157,35 @@ pub trait Island {
     /// WG TODO: Define when this method may be called, whether its response is a quote or the actual repair decision, and whether `&mut self` is required.
     fn repair_hull(&self, ship: ShipId) -> RepairHullResponse;
 
-    /// Returns historical visit information that this Island chooses to disclose to the requesting Ship.
+    /// Returns the mooring history this Island chooses to disclose to `requester`.
     ///
-    /// The Island is free to maintain its internal history using any data structure. It is not required to store or reveal every visit.
+    /// The map associates each described Ship with the rounds in which it moored
+    /// at this Island.
+    /// Nothing else about those visits is disclosed.
     ///
-    /// - `None` indicates that no history response is available.
-    /// - `Some(records)` contains the visit records disclosed to the requester. An empty vector is a valid response.
+    /// An Island may keep its internal history in any structure and is not
+    /// required to reveal every visit.
     ///
-    /// The `requester` parameter identifies the Ship requesting the information, not the Ships described by the records.
+    /// # Contract
+    ///
+    /// - `requester` is the Ship asking, not one of the Ships described.
+    /// - `requester` must not appear as a key: the service concerns its rivals.
+    /// - Each `Vec<Round>` is in ascending order.
+    /// - Ships that have never moored here, or whose visits are not disclosed,
+    ///   have no entry.
+    /// - Iteration order is that of the `BTreeMap` (ascending `ShipId`), so the
+    ///   result is deterministic.
+    ///
+    /// # Returns
+    ///
+    /// - `None`: the Island does not offer this service.
+    /// - `Some(map)`: the disclosed history. An empty map is a valid response.
     ///
     /// This method must not modify the Island's state.
     ///
-    /// This method is Default None since its optional
-    ///
-    /// WG TODO: Define how the Chart triggers this optional service and communicates its result to the requesting Ship, since AskHistory is not a Main 5.3 action.
-    fn ask_history(&self, requester: ShipId, ) -> Option<Vec<VisitRecord>> { None }
-}
+    /// The default implementation returns `None`, since the service is optional.
 
-/// Represents a single visit made by a Ship to an Island.
-///
-/// A Ship may visit the same Island multiple times.
-/// Each visit is represented by a separate `VisitRecord`.
-///
-/// The visit starts at `arrival_round` and ends at `departure_round`, if the Ship has left.
-///
-/// An absent departure round (None) indicates an ongoing visit.
-///
-/// Island implementations are free to use any internal data structure to track their history.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct VisitRecord {
-    /// Identifier of the visiting Ship.
-    pub ship: ShipId,
-
-    /// Round in which the Ship moored at this Island.
-    pub arrival_round: Round,
-
-    /// Round in which the Ship left the Island.
-    /// `None` indicates that the Ship is still moored.
-    pub departure_round: Option<Round>,
+    fn ask_history(&self, requester: ShipId) -> Option<BTreeMap<ShipId, Vec<Round>>> {
+        None
+    }
 }
