@@ -94,8 +94,6 @@ pub struct IslandInit {
 ///
 /// The Chart must satisfy each method's documented preconditions.
 /// Violating a precondition is a caller error and must not cause a panic.
-/// If a method can panic for another reason, document when in a
-/// `# Panics` section.
 pub trait Island {
     /// Creates an Island from data supplied by the Chart.
     ///
