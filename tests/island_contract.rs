@@ -1,5 +1,5 @@
 use IslandSharedType::island::{Island, IslandInit, IslandResponse, MoorResponse};
-use IslandSharedType::types::{Clue, Round, ShipId};
+use IslandSharedType::types::{Clue, Params, Round, ShipId};
 use std::collections::HashSet;
 // Test Island with a single berth and a three-round wait per visit.
 struct MockIsland {
@@ -73,7 +73,7 @@ fn test_island_trait_object() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut mock = MockIsland::new(init);
@@ -88,7 +88,7 @@ fn test_default_ask_history() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mock = MockIsland::new(init);
@@ -101,7 +101,7 @@ fn test_moor_lifecycle() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -128,7 +128,7 @@ fn test_wait_for_clue() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -159,7 +159,7 @@ fn test_round_advance_zero() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -189,7 +189,7 @@ fn test_multiple_ships() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -229,7 +229,7 @@ fn test_can_moor_is_pure() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -243,7 +243,7 @@ fn test_leave_berth() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -262,7 +262,7 @@ fn test_wait_starts_on_mooring() {
     let mut island = MockIsland::new(IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     });
 
     for round in 2..=4 {

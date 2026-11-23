@@ -1,4 +1,4 @@
-/// Mock types for testing
+//! Mock types for testing
 
 pub type ShipId = u8;
 
@@ -27,7 +27,7 @@ pub struct Params {
 
 impl Default for Params {
     fn default() -> Self {
-        Self{
+        Self {
             archipelago_radius: 16,
             island_count: 4,
             bombard_range: 3,
@@ -36,7 +36,7 @@ impl Default for Params {
             rock_count: 3,
             round_cap: 200,
             round_deadline_ms: 100,
-            vision_range: 4
+            vision_range: 4,
         }
     }
 }
