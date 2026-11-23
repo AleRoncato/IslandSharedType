@@ -1,5 +1,5 @@
-use IslandSharedType::island::{Island, IslandInit, IslandResponse, MoorResponse};
-use IslandSharedType::types::{Clue, Params, Round, ShipId};
+use island_trait::island::{Island, IslandInit, IslandResponse, MoorResponse};
+use island_trait::types::{Clue, Params, Round, ShipId};
 use std::collections::HashSet;
 // Test Island with a single berth and a three-round wait per visit.
 struct MockIsland {
