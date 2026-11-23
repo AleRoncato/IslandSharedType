@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
 /// Result of a Ship's `AskClue` action, as decided by the Island.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IslandResponse {
     /// Returns the island's original clue or a valid weakening of it.
@@ -19,6 +20,7 @@ pub enum IslandResponse {
 }
 
 /// How an Island answers to a moor request.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoorResponse {
     /// The island approved the ship's mooring request.
@@ -30,6 +32,7 @@ pub enum MoorResponse {
 }
 
 /// How an Island answers to a repair_hull request.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepairHullResponse {
     /// The Island approves a repair of the given number of hull points.
