@@ -189,6 +189,12 @@ pub trait Island {
     ///
     /// The Chart owns Ship hull points and applies any accepted repair, never allowing the hull to exceed `Params::hull_strength`.
     ///
+    /// # Returns
+    ///
+    /// - `None` if the Island does not offer hull repairs.
+    /// - `Some(response)` if the Island offers hull repairs.
+    ///   [`RepairHullResponse::Refused`] means the Island declines this request.
+    ///
     /// WG TODO: Define when this method may be called, whether its response is a quote or the actual repair decision.
     fn repair_hull(&mut self, _ship: ShipId) -> Option<RepairHullResponse> {
         None
