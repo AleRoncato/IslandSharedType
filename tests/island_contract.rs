@@ -1,7 +1,7 @@
 use IslandSharedType::island::{Island, IslandInit, IslandResponse, MoorResponse};
 use IslandSharedType::types::{Clue, Round, ShipId};
 use std::collections::HashSet;
-// creazione di una isola di prova
+// Test Island with a single berth and a three-round wait per visit.
 struct MockIsland {
     clue: Clue,
     moored: Option<ShipId>,
@@ -10,23 +10,18 @@ struct MockIsland {
 }
 
 impl Island for MockIsland {
-    // metodo new per creare una isola
     fn new(init: IslandInit) -> Self {
-        // crea una isola con un solo posto di attracco
-        // quando creiamo l'isola, nessuna nave è ancora ormeggiata
-        // terzo punto per il quarto test creiamo una served
         Self {
             clue: init.clue,
             moored: None,
             served_full: HashSet::new(),
-            remaining: 3,
+            remaining: 0,
         }
     }
-    // registra effettivamente l'ormeggio
     fn moor(&mut self, ship: ShipId) {
         self.moored = Some(ship);
+        self.remaining = 3;
     }
-    // controlla se una nave può ormeggiare, senza cambiare lo stato dell'isola
 
     fn can_moor(&self, _ship: ShipId) -> MoorResponse {
         if self.moored.is_none() {
@@ -35,11 +30,9 @@ impl Island for MockIsland {
             MoorResponse::NoBerth
         }
     }
-    //verifica se una nave è ormeggiata
     fn is_moored(&self, ship: ShipId) -> bool {
         self.moored == Some(ship)
     }
-    //registra l'uscita della nave
     fn leave_berth(&mut self, ship: ShipId) {
         if self.moored == Some(ship) {
             self.moored = None;
@@ -55,12 +48,10 @@ impl Island for MockIsland {
         }
         self.served_full.insert(ship);
         IslandResponse::Respond(self.clue)
-
-        // IslandResponse::Respond(self.clue)
     }
 
     fn remaining_wait(&self, ship: ShipId) -> Option<u32> {
-        Some(self.remaining)
+        (self.moored == Some(ship)).then_some(self.remaining)
     }
 
     fn has_more_to_offer(&self, ship: ShipId) -> bool {
@@ -71,9 +62,9 @@ impl Island for MockIsland {
     }
 
     fn round_advance(&mut self, _round: Round) {
-        if self.remaining > 0 {
-            self.remaining -= 1;
-        } // niente else?
+        if self.moored.is_some() {
+            self.remaining = self.remaining.saturating_sub(1);
+        }
     }
 }
 
@@ -115,27 +106,21 @@ fn test_moor_lifecycle() {
 
     let mut island = MockIsland::new(init);
 
-    // All'inizio la nave 1 non è ormeggiata
     assert!(!island.is_moored(1));
 
-    // Controlliamo se può ormeggiare
     assert_eq!(island.can_moor(1), MoorResponse::Accepted);
 
-    // can_moor non deve modificare lo stato
+    // Checking availability leaves the berth unoccupied.
     assert!(!island.is_moored(1));
 
-    // Ormeggiamo effettivamente la nave
     island.moor(1);
     assert!(island.is_moored(1));
 
-    // La nave 2 trova il posto occupato
     assert_eq!(island.can_moor(2), MoorResponse::NoBerth);
 
-    // La nave 1 lascia l'isola
     island.leave_berth(1);
     assert!(!island.is_moored(1));
 
-    // Il posto torna disponibile
     assert_eq!(island.can_moor(2), MoorResponse::Accepted);
 }
 #[test]
@@ -149,13 +134,10 @@ fn test_wait_for_clue() {
     let mut island = MockIsland::new(init);
     island.moor(1);
 
-    // Inizialmente mancano 3 round
     assert_eq!(island.ask_clue(1), IslandResponse::Wait(3));
 
-    // Il Chart fa avanzare un round
     island.round_advance(1);
 
-    // Ora ne mancano 2
     assert_eq!(island.ask_clue(1), IslandResponse::Wait(2));
 
     island.round_advance(2);
@@ -163,20 +145,15 @@ fn test_wait_for_clue() {
 
     island.round_advance(3);
 
-    // L'attesa è terminata
     assert_eq!(island.remaining_wait(1), Some(0));
 
-    // La nave riceve l'indizio completo
     assert_eq!(island.ask_clue(1), IslandResponse::Respond(Clue { id: 1 }));
 
-    // Dopo aver ricevuto l'indizio completo,
-    // l'isola non ha più nulla da offrirle
+    // Delivering the full clue exhausts the offer for this ship.
     assert!(!island.has_more_to_offer(1));
 
-    // Una seconda richiesta non restituisce un altro indizio
     assert_eq!(island.ask_clue(1), IslandResponse::NothingMore);
 }
-//test per verificare cosa succede quando il contatore dell'attesa arriva a zero
 #[test]
 fn test_round_advance_zero() {
     let init = IslandInit {
@@ -189,7 +166,6 @@ fn test_round_advance_zero() {
 
     island.moor(1);
 
-    // Inizialmente mancano 3 round
     assert_eq!(island.remaining_wait(1), Some(3));
 
     island.round_advance(1);
@@ -219,13 +195,10 @@ fn test_multiple_ships() {
     let mut island = MockIsland::new(init);
     island.moor(1);
 
-    // Inizialmente mancano 3 round
     assert_eq!(island.ask_clue(1), IslandResponse::Wait(3));
 
-    // Il Chart fa avanzare un round
     island.round_advance(1);
 
-    // Ora ne mancano 2
     assert_eq!(island.ask_clue(1), IslandResponse::Wait(2));
 
     island.round_advance(2);
@@ -233,21 +206,22 @@ fn test_multiple_ships() {
 
     island.round_advance(3);
 
-    // L'attesa è terminata
     assert_eq!(island.remaining_wait(1), Some(0));
 
-    // La nave riceve l'indizio completo
     assert_eq!(island.ask_clue(1), IslandResponse::Respond(Clue { id: 1 }));
     island.leave_berth(1);
 
     island.moor(2);
 
-    // seconda barca
-    // siccome non abbiamo azzerato i eound d aspettare allora il contatore dovrebbe gia essere pari a 0
-    // L'attesa è terminata
+    // The second ship starts its own three-round wait.
+    assert_eq!(island.remaining_wait(2), Some(3));
+
+    for round in 4..=6 {
+        island.round_advance(round);
+    }
+
     assert_eq!(island.remaining_wait(2), Some(0));
 
-    // La nave riceve l'indizio completo
     assert_eq!(island.ask_clue(2), IslandResponse::Respond(Clue { id: 1 }));
 }
 #[test]
@@ -259,14 +233,11 @@ fn test_can_moor_is_pure() {
     };
 
     let mut island = MockIsland::new(init);
-    // verifichiamo che la risposta da parte dell'isola sia uguale a Apcecptet cioe' che la barca puó attraccare
     assert_eq!(island.can_moor(1), MoorResponse::Accepted);
-    // controlla che sia attraccata
     assert!(!island.is_moored(1));
     island.moor(1);
     assert!(island.is_moored(1));
 }
-// testare se una barca effettivamente lascia il molo una volta chiamato il metodo
 #[test]
 fn test_leave_berth() {
     let init = IslandInit {
@@ -276,14 +247,31 @@ fn test_leave_berth() {
     };
 
     let mut island = MockIsland::new(init);
-    // verifichiamo che la risposta da parte dell'isola sia uguale a Apcecptet cioe' che la barca puó attraccare
     island.moor(1);
     assert!(island.is_moored(1));
     island.leave_berth(1);
     assert!(!island.is_moored(1));
 
-    // La seconda nave può attraccare
     assert_eq!(island.can_moor(2), MoorResponse::Accepted);
     island.moor(2);
     assert!(island.is_moored(2));
+}
+
+#[test]
+fn test_wait_starts_on_mooring() {
+    let mut island = MockIsland::new(IslandInit {
+        clue: Clue { id: 1 },
+        seed: 42,
+        params: Default::default(),
+    });
+
+    for round in 2..=4 {
+        island.round_advance(round);
+    }
+
+    assert_eq!(island.can_moor(1), MoorResponse::Accepted);
+    island.moor(1);
+
+    assert_eq!(island.remaining_wait(1), Some(3));
+    assert_eq!(island.ask_clue(1), IslandResponse::Wait(3));
 }
