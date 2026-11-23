@@ -4,3 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+common_shared = { package = "ap-2026-common-code-shared", git = "https://github.com/SharedCode-UniTn-AP-2026/Common_Code-AP_2026.git", rev = "748f76edc5b748366c731f1d0949f2bdd492b1c0" }
+common_clues = { package = "ap-2026-common-code-clues", git = "https://github.com/SharedCode-UniTn-AP-2026/Common_Code-AP_2026.git", rev = "748f76edc5b748366c731f1d0949f2bdd492b1c0" }

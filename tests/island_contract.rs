@@ -1,6 +1,13 @@
+use common_clues::{Axis, Bound};
 use island_trait::island::{Island, IslandInit, IslandResponse, MoorResponse};
 use island_trait::types::{Clue, Params, Round, ShipId};
 use std::collections::HashSet;
+
+const TEST_CLUE: Clue = Clue::HalfPlane {
+    axis: Axis::Q,
+    bound: Bound::AtLeast(0),
+};
+
 // Test Island with a single berth and a three-round wait per visit.
 struct MockIsland {
     clue: Clue,
@@ -71,7 +78,7 @@ impl Island for MockIsland {
 #[test]
 fn test_island_trait_object() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
@@ -80,187 +87,196 @@ fn test_island_trait_object() {
 
     let island: &mut dyn Island = &mut mock;
 
-    assert_eq!(island.can_moor(1), MoorResponse::Accepted);
+    assert_eq!(island.can_moor(ShipId(1)), MoorResponse::Accepted);
 }
 
 #[test]
 fn test_default_ask_history() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
 
     let mock = MockIsland::new(init);
 
-    assert_eq!(mock.ask_history(1), None);
+    assert_eq!(mock.ask_history(ShipId(1)), None);
 }
 
 #[test]
 fn test_moor_lifecycle() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
 
-    assert!(!island.is_moored(1));
+    assert!(!island.is_moored(ShipId(1)));
 
-    assert_eq!(island.can_moor(1), MoorResponse::Accepted);
+    assert_eq!(island.can_moor(ShipId(1)), MoorResponse::Accepted);
 
     // Checking availability leaves the berth unoccupied.
-    assert!(!island.is_moored(1));
+    assert!(!island.is_moored(ShipId(1)));
 
-    island.moor(1);
-    assert!(island.is_moored(1));
+    island.moor(ShipId(1));
+    assert!(island.is_moored(ShipId(1)));
 
-    assert_eq!(island.can_moor(2), MoorResponse::NoBerth);
+    assert_eq!(island.can_moor(ShipId(2)), MoorResponse::NoBerth);
 
-    island.leave_berth(1);
-    assert!(!island.is_moored(1));
+    island.leave_berth(ShipId(1));
+    assert!(!island.is_moored(ShipId(1)));
 
-    assert_eq!(island.can_moor(2), MoorResponse::Accepted);
+    assert_eq!(island.can_moor(ShipId(2)), MoorResponse::Accepted);
 }
 #[test]
 fn test_wait_for_clue() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
-    island.moor(1);
+    island.moor(ShipId(1));
 
-    assert_eq!(island.ask_clue(1), IslandResponse::Wait(3));
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::Wait(3));
 
     island.round_advance(1);
 
-    assert_eq!(island.ask_clue(1), IslandResponse::Wait(2));
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::Wait(2));
 
     island.round_advance(2);
-    assert_eq!(island.ask_clue(1), IslandResponse::Wait(1));
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::Wait(1));
 
     island.round_advance(3);
 
-    assert_eq!(island.remaining_wait(1), Some(0));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(0));
 
-    assert_eq!(island.ask_clue(1), IslandResponse::Respond(Clue { id: 1 }));
+    assert_eq!(
+        island.ask_clue(ShipId(1)),
+        IslandResponse::Respond(TEST_CLUE)
+    );
 
     // Delivering the full clue exhausts the offer for this ship.
-    assert!(!island.has_more_to_offer(1));
+    assert!(!island.has_more_to_offer(ShipId(1)));
 
-    assert_eq!(island.ask_clue(1), IslandResponse::NothingMore);
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::NothingMore);
 }
 #[test]
 fn test_round_advance_zero() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
 
-    island.moor(1);
+    island.moor(ShipId(1));
 
-    assert_eq!(island.remaining_wait(1), Some(3));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(3));
 
     island.round_advance(1);
-    assert_eq!(island.remaining_wait(1), Some(2));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(2));
 
     island.round_advance(2);
-    assert_eq!(island.remaining_wait(1), Some(1));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(1));
 
     island.round_advance(3);
-    assert_eq!(island.remaining_wait(1), Some(0));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(0));
 
     island.round_advance(4);
-    assert_eq!(island.remaining_wait(1), Some(0));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(0));
 
     island.round_advance(5);
-    assert_eq!(island.remaining_wait(1), Some(0));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(0));
 }
 
 #[test]
 fn test_multiple_ships() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
-    island.moor(1);
+    island.moor(ShipId(1));
 
-    assert_eq!(island.ask_clue(1), IslandResponse::Wait(3));
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::Wait(3));
 
     island.round_advance(1);
 
-    assert_eq!(island.ask_clue(1), IslandResponse::Wait(2));
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::Wait(2));
 
     island.round_advance(2);
-    assert_eq!(island.ask_clue(1), IslandResponse::Wait(1));
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::Wait(1));
 
     island.round_advance(3);
 
-    assert_eq!(island.remaining_wait(1), Some(0));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(0));
 
-    assert_eq!(island.ask_clue(1), IslandResponse::Respond(Clue { id: 1 }));
-    island.leave_berth(1);
+    assert_eq!(
+        island.ask_clue(ShipId(1)),
+        IslandResponse::Respond(TEST_CLUE)
+    );
+    island.leave_berth(ShipId(1));
 
-    island.moor(2);
+    island.moor(ShipId(2));
 
     // The second ship starts its own three-round wait.
-    assert_eq!(island.remaining_wait(2), Some(3));
+    assert_eq!(island.remaining_wait(ShipId(2)), Some(3));
 
     for round in 4..=6 {
         island.round_advance(round);
     }
 
-    assert_eq!(island.remaining_wait(2), Some(0));
+    assert_eq!(island.remaining_wait(ShipId(2)), Some(0));
 
-    assert_eq!(island.ask_clue(2), IslandResponse::Respond(Clue { id: 1 }));
+    assert_eq!(
+        island.ask_clue(ShipId(2)),
+        IslandResponse::Respond(TEST_CLUE)
+    );
 }
 #[test]
 fn test_can_moor_is_pure() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
-    assert_eq!(island.can_moor(1), MoorResponse::Accepted);
-    assert!(!island.is_moored(1));
-    island.moor(1);
-    assert!(island.is_moored(1));
+    assert_eq!(island.can_moor(ShipId(1)), MoorResponse::Accepted);
+    assert!(!island.is_moored(ShipId(1)));
+    island.moor(ShipId(1));
+    assert!(island.is_moored(ShipId(1)));
 }
 #[test]
 fn test_leave_berth() {
     let init = IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
-    island.moor(1);
-    assert!(island.is_moored(1));
-    island.leave_berth(1);
-    assert!(!island.is_moored(1));
+    island.moor(ShipId(1));
+    assert!(island.is_moored(ShipId(1)));
+    island.leave_berth(ShipId(1));
+    assert!(!island.is_moored(ShipId(1)));
 
-    assert_eq!(island.can_moor(2), MoorResponse::Accepted);
-    island.moor(2);
-    assert!(island.is_moored(2));
+    assert_eq!(island.can_moor(ShipId(2)), MoorResponse::Accepted);
+    island.moor(ShipId(2));
+    assert!(island.is_moored(ShipId(2)));
 }
 
 #[test]
 fn test_wait_starts_on_mooring() {
     let mut island = MockIsland::new(IslandInit {
-        clue: Clue { id: 1 },
+        clue: TEST_CLUE,
         seed: 42,
         params: Params::default(),
     });
@@ -269,9 +285,9 @@ fn test_wait_starts_on_mooring() {
         island.round_advance(round);
     }
 
-    assert_eq!(island.can_moor(1), MoorResponse::Accepted);
-    island.moor(1);
+    assert_eq!(island.can_moor(ShipId(1)), MoorResponse::Accepted);
+    island.moor(ShipId(1));
 
-    assert_eq!(island.remaining_wait(1), Some(3));
-    assert_eq!(island.ask_clue(1), IslandResponse::Wait(3));
+    assert_eq!(island.remaining_wait(ShipId(1)), Some(3));
+    assert_eq!(island.ask_clue(ShipId(1)), IslandResponse::Wait(3));
 }
