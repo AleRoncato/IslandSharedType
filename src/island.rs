@@ -190,7 +190,9 @@ pub trait Island {
     /// The Chart owns Ship hull points and applies any accepted repair, never allowing the hull to exceed `Params::hull_strength`.
     ///
     /// WG TODO: Define when this method may be called, whether its response is a quote or the actual repair decision, and whether `&mut self` is required.
-    fn repair_hull(&self, ship: ShipId) -> RepairHullResponse;
+    fn repair_hull(&self, _ship: ShipId) -> Option<RepairHullResponse> {
+        None
+    }
 
     /// Returns the mooring history this Island chooses to disclose to `requester`.
     ///

@@ -1,9 +1,6 @@
-use std::collections::HashSet;
-use IslandSharedType::island::{
-    Island, IslandInit, IslandResponse,
-    MoorResponse, RepairHullResponse,
-};
+use IslandSharedType::island::{Island, IslandInit, IslandResponse, MoorResponse};
 use IslandSharedType::types::{Clue, Round, ShipId};
+use std::collections::HashSet;
 // creazione di una isola di prova
 struct MockIsland {
     clue: Clue,
@@ -50,18 +47,16 @@ impl Island for MockIsland {
     }
 
     fn ask_clue(&mut self, ship: ShipId) -> IslandResponse {
-        if self.served_full.contains(&ship){
-            return IslandResponse::NothingMore
+        if self.served_full.contains(&ship) {
+            return IslandResponse::NothingMore;
         }
-        if self.remaining>0{
+        if self.remaining > 0 {
             return IslandResponse::Wait(self.remaining);
         }
         self.served_full.insert(ship);
         IslandResponse::Respond(self.clue)
 
         // IslandResponse::Respond(self.clue)
-
-
     }
 
     fn remaining_wait(&self, ship: ShipId) -> Option<u32> {
@@ -69,23 +64,16 @@ impl Island for MockIsland {
     }
 
     fn has_more_to_offer(&self, ship: ShipId) -> bool {
-        if self.served_full.contains(&ship){
-            return false
+        if self.served_full.contains(&ship) {
+            return false;
         }
         true
     }
 
     fn round_advance(&mut self, _round: Round) {
-
-        if self.remaining>0{
-            self.remaining-=1;
-        }// niente else?
-
-    }
-
-
-    fn repair_hull(&self, _ship: ShipId) -> RepairHullResponse {
-        RepairHullResponse::Refused
+        if self.remaining > 0 {
+            self.remaining -= 1;
+        } // niente else?
     }
 }
 
@@ -179,21 +167,14 @@ fn test_wait_for_clue() {
     assert_eq!(island.remaining_wait(1), Some(0));
 
     // La nave riceve l'indizio completo
-    assert_eq!(
-        island.ask_clue(1),
-        IslandResponse::Respond(Clue { id: 1 })
-    );
+    assert_eq!(island.ask_clue(1), IslandResponse::Respond(Clue { id: 1 }));
 
     // Dopo aver ricevuto l'indizio completo,
     // l'isola non ha più nulla da offrirle
     assert!(!island.has_more_to_offer(1));
 
     // Una seconda richiesta non restituisce un altro indizio
-    assert_eq!(
-        island.ask_clue(1),
-        IslandResponse::NothingMore
-    );
-
+    assert_eq!(island.ask_clue(1), IslandResponse::NothingMore);
 }
 //test per verificare cosa succede quando il contatore dell'attesa arriva a zero
 #[test]
@@ -225,11 +206,10 @@ fn test_round_advance_zero() {
 
     island.round_advance(5);
     assert_eq!(island.remaining_wait(1), Some(0));
-
 }
 
 #[test]
-fn test_multiple_ships(){
+fn test_multiple_ships() {
     let init = IslandInit {
         clue: Clue { id: 1 },
         seed: 42,
@@ -257,10 +237,7 @@ fn test_multiple_ships(){
     assert_eq!(island.remaining_wait(1), Some(0));
 
     // La nave riceve l'indizio completo
-    assert_eq!(
-        island.ask_clue(1),
-        IslandResponse::Respond(Clue { id: 1 })
-    );
+    assert_eq!(island.ask_clue(1), IslandResponse::Respond(Clue { id: 1 }));
     island.leave_berth(1);
 
     island.moor(2);
@@ -271,10 +248,7 @@ fn test_multiple_ships(){
     assert_eq!(island.remaining_wait(2), Some(0));
 
     // La nave riceve l'indizio completo
-    assert_eq!(
-        island.ask_clue(2),
-        IslandResponse::Respond(Clue { id: 1 })
-    );
+    assert_eq!(island.ask_clue(2), IslandResponse::Respond(Clue { id: 1 }));
 }
 #[test]
 fn test_can_moor_is_pure() {
@@ -291,7 +265,6 @@ fn test_can_moor_is_pure() {
     assert!(!island.is_moored(1));
     island.moor(1);
     assert!(island.is_moored(1));
-    
 }
 // testare se una barca effettivamente lascia il molo una volta chiamato il metodo
 #[test]
@@ -314,6 +287,3 @@ fn test_leave_berth() {
     island.moor(2);
     assert!(island.is_moored(2));
 }
-
-
-
