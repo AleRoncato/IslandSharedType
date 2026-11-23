@@ -33,7 +33,7 @@ pub enum MoorResponse {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepairHullResponse {
     /// The Island approves a repair of the given number of hull points.
-    /// The Chart applies the repair, capping the hull at `Params::hull_strenght`
+    /// The Chart applies the repair, capping the hull at `Params::hull_strength`
     Accepted(u32),
     /// Request rejected due to Island's own policies.
     Refused,
@@ -91,12 +91,13 @@ pub trait Island {
     fn new(init: IslandInit) -> Self
     where
         Self: Sized;
-    /// **Applies** a valid moor request
-    ///The chart calls this method to **apply** the moor request from Ship S to the Island I.
+
+    /// Registers `ship` as moored at this Island.
     ///
-    /// The Chart calls this only after checking all applicable game rules, including [`Island::can_moor`], and immediately applying that validated action.
-    ///
-    /// moor method mutates the island's state
+    /// The Chart calls this method only after validating the mooring action,
+    /// including obtaining [`MoorResponse::Accepted`] from
+    /// [`Island::can_moor`] for `ship`. It applies the action immediately,
+    /// with no intervening change to the game state.
     fn moor(&mut self, ship: ShipId);
 
     /// Checks whether `ship` would be accepted for mooring *without mutation*.
@@ -116,16 +117,20 @@ pub trait Island {
     /// WG TODO: The Chart already knows each Ship's mooring state; decide whether this query is necessary/useful in the trait.
     fn is_moored(&self, ship: ShipId) -> bool;
 
-    /// Makes a moored ship leave the berth
+    /// Releases the berth occupied by `ship`.
     ///
-    /// This method is called by the Chart **after** validating that the ship is actually moored.
-    /// WG TODO: Define any additional call sites, e.g. a Ship sinking while moored, and the effect of departure on partial waiting progress.
+    /// The Chart calls this method when an applied move takes `ship`
+    /// away from this Island or when `ship` sinks while moored here.
+    /// The berth must be free before the Chart validates the next action.
+    ///
+    /// The Island's policy determines whether unfinished waiting progress
+    /// carries over to a later visit.
     fn leave_berth(&mut self, ship: ShipId);
 
     /// Handles a Clue request from `ship` according to the Island's policy.
     ///
-    /// The Chart calls this method after confirming that `ship` is moored
-    /// at this Island.
+    /// The Chart calls this method while applying a validated `AskClue`
+    /// action, after confirming that `ship` is moored at this Island.
     ///
     /// The Island must eventually give its original, full-strength Clue
     /// to every Ship that keeps returning and waits as long as requested.
@@ -153,9 +158,11 @@ pub trait Island {
 
     /// Notifies the Island that the Chart has advanced to `round`.
     ///
-    /// The Chart increments the global round first, then calls this method exactly once per Island
+    /// The Chart increments the global round first, then calls this method
+    /// once per Island in ascending `IslandId` order. The game starts at
+    /// round 1, so the first call receives round 2.
     ///
-    /// The Island must not independently increment the *global* round.
+    /// The Chart owns the global round number.
     fn round_advance(&mut self, round: Round);
 
     //Optional and TBD
