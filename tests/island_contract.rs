@@ -6,10 +6,7 @@
 
 use std::collections::HashSet;
 
-use island_trait::island::{
-    Island, IslandInit, IslandResponse,
-    MoorResponse,
-};
+use island_trait::island::{Island, IslandInit, IslandResponse, MoorResponse};
 
 use island_trait::types::{Clue, Round, ShipId};
 
@@ -61,10 +58,10 @@ impl Island for MockIsland {
     }
 
     fn ask_clue(&mut self, ship: ShipId) -> IslandResponse {
-        if self.served_full.contains(&ship){
-            return IslandResponse::NothingMore
+        if self.served_full.contains(&ship) {
+            return IslandResponse::NothingMore;
         }
-        if self.remaining>0{
+        if self.remaining > 0 {
             return IslandResponse::Wait(self.remaining);
         }
         self.served_full.insert(ship);
@@ -76,15 +73,15 @@ impl Island for MockIsland {
     }
 
     fn has_more_to_offer(&self, ship: ShipId) -> bool {
-        if self.served_full.contains(&ship){
-            return false
+        if self.served_full.contains(&ship) {
+            return false;
         }
         true
     }
 
     fn round_advance(&mut self, _round: Round) {
-        if self.remaining>0{
-            self.remaining-=1;
+        if self.remaining > 0 {
+            self.remaining -= 1;
         } // Once the counter reaches zero, it stays at zero.
     }
 }
@@ -184,21 +181,14 @@ fn test_wait_for_clue() {
     assert_eq!(island.remaining_wait(ship1), Some(0));
 
     // The ship receives the full clue.
-    assert_eq!(
-        island.ask_clue(ship1),
-        IslandResponse::Respond(TEST_CLUE)
-    );
+    assert_eq!(island.ask_clue(ship1), IslandResponse::Respond(TEST_CLUE));
 
     // After receiving the full clue,
     // the island has nothing more to offer this ship.
     assert!(!island.has_more_to_offer(ship1));
 
     // A repeated request does not reveal another clue.
-    assert_eq!(
-        island.ask_clue(ship1),
-        IslandResponse::NothingMore
-    );
-
+    assert_eq!(island.ask_clue(ship1), IslandResponse::NothingMore);
 }
 // Verify that the waiting counter stops at zero.
 #[test]
@@ -230,11 +220,10 @@ fn test_round_advance_zero() {
 
     island.round_advance(5);
     assert_eq!(island.remaining_wait(ship1), Some(0));
-
 }
 
 #[test]
-fn test_multiple_ships(){
+fn test_multiple_ships() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
@@ -265,10 +254,7 @@ fn test_multiple_ships(){
     assert_eq!(island.remaining_wait(ship1), Some(0));
 
     // The ship receives the full clue.
-    assert_eq!(
-        island.ask_clue(ship1),
-        IslandResponse::Respond(TEST_CLUE)
-    );
+    assert_eq!(island.ask_clue(ship1), IslandResponse::Respond(TEST_CLUE));
     island.leave_berth(ship1);
 
     island.moor(ship2);
@@ -279,10 +265,7 @@ fn test_multiple_ships(){
     assert_eq!(island.remaining_wait(ship2), Some(0));
 
     // The ship receives the full clue.
-    assert_eq!(
-        island.ask_clue(ship2),
-        IslandResponse::Respond(TEST_CLUE)
-    );
+    assert_eq!(island.ask_clue(ship2), IslandResponse::Respond(TEST_CLUE));
 }
 #[test]
 fn test_can_moor_is_pure() {
@@ -301,7 +284,6 @@ fn test_can_moor_is_pure() {
     assert!(!island.is_moored(ship1));
     island.moor(ship1);
     assert!(island.is_moored(ship1));
-
 }
 // Verify that leaving the berth frees it for another ship.
 #[test]
@@ -363,7 +345,6 @@ fn test_has_more_to_offer_initial() {
 
     // The island still has a clue to offer.
     assert!(island.has_more_to_offer(ship1));
-
 }
 #[test]
 fn test_leave_berth_wrong_ship() {
@@ -387,7 +368,6 @@ fn test_leave_berth_wrong_ship() {
 
     // Ship 2 must not be moored.
     assert!(!island.is_moored(ship2));
-
 }
 
 #[test]
@@ -415,9 +395,5 @@ fn test_wait_without_asking_clue() {
 
     assert_eq!(island.remaining_wait(ship1), Some(0));
     // The first clue request now returns the full clue.
-    assert_eq!(
-        island.ask_clue(ship1),
-        IslandResponse::Respond(TEST_CLUE)
-    );
-
+    assert_eq!(island.ask_clue(ship1), IslandResponse::Respond(TEST_CLUE));
 }

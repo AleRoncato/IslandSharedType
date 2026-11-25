@@ -1,3 +1,4 @@
+use crate::island::OptionalServiceResponse::NotImplemented;
 use crate::types::{Clue, Params, Round, Seed, ShipId};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
@@ -31,19 +32,43 @@ pub enum MoorResponse {
     NoBerth,
 }
 
-/// How an Island answers to a `repair_hull` request.
+/// Marker for the payload carried by [`OptionalServiceResponse::Accepted`].
+///
+/// It is implemented for the payloads of the optional services defined in
+/// this module: hull points (`u32`) and the disclosed mooring history.
+pub trait OptionalServiceData {}
+
+impl OptionalServiceData for BTreeMap<ShipId, Vec<Round>> {}
+impl OptionalServiceData for u32 {}
+
+/// How an Island answers a request for one of its optional services.
+///
+/// The payload type `T` depends on the service: hull
+/// points for repairs, a mooring history for `ask_history`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RepairHullResponse {
-    /// The Island approves a repair of the given number of hull points.
-    /// The Chart applies the repair, capping the hull at `Params::hull_strength`
-    Accepted(u32),
-    /// Request rejected due to Island's own policies.
+pub enum OptionalServiceResponse<T: OptionalServiceData> {
+    /// The Island does not offer this service at all.
+    ///
+    /// This does not depend on the Ship: it is the default for Islands that
+    /// do not implement the service.
+    NotImplemented,
+    /// The Island provides the service, with the given payload.
+    ///
+    /// For a repair, the payload is the number of hull points granted. The
+    /// Chart applies it and never lets the hull exceed `Params::hull_strength`.
+    /// For a history, it is the disclosed map.
+    Accepted(T),
+    /// The Island offers the service but declines this request,
+    /// according to its own policies.
     Refused,
-    /// The Ship has to wait at least n > 0 rounds to be repaired.
-    Wait(u32),
 }
 
+/// Answer of [`Island::repair_hull`]: the payload is the hull points granted.
+pub type RepairHullResponse = OptionalServiceResponse<u32>;
+
+/// Answer of [`Island::ask_history`]: the payload is the disclosed history.
+pub type HistoryResponse = OptionalServiceResponse<BTreeMap<ShipId, Vec<Round>>>;
 /// Readable display intended primarily for debugging and examples.
 impl Display for IslandResponse {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -181,36 +206,40 @@ pub trait Island {
     /// The Chart owns the global round number.
     fn round_advance(&mut self, round: Round);
 
-    //Optional and TBD
-
-    /// Queries this Island's optional hull-repair service for `ship`.
+    /// Offers this Island's optional hull-repair service to `ship`.
     ///
-    /// The Chart owns Ship hull points and applies any accepted repair, never allowing the hull to exceed `Params::hull_strength`.
+    /// The Chart calls this method while applying an accepted `Moor` action,
+    /// right after [`Island::moor`] registered `ship`. It is never called for a
+    /// Ship whose mooring was refused.
     ///
-    /// # Returns
+    /// The Island decides how many hull points to grant, according to its
+    /// policy. The payload can only raise a hull, so an Island never harms a Ship
+    /// The Chart owns the hull and applies the repair, capping the
+    /// hull at `Params::hull_strength`.
     ///
-    /// - `None` if the Island does not offer hull repairs.
-    /// - `Some(response)` if the Island offers hull repairs.
-    ///   [`RepairHullResponse::Refused`] means the Island declines this request.
-    ///
-    /// WG TODO: Define when this method may be called, whether its response is a quote or the actual repair decision.
-    fn repair_hull(&mut self, _ship: ShipId) -> Option<RepairHullResponse> {
-        None
+    /// The default implementation returns [`OptionalServiceResponse::NotImplemented`],
+    /// since the service is optional.
+    fn repair_hull(&mut self, _ship: ShipId) -> RepairHullResponse {
+        OptionalServiceResponse::NotImplemented
     }
 
     /// Returns the mooring history this Island chooses to disclose to `requester`.
     ///
-    /// The map associates each described Ship with the rounds in which it moored
-    /// at this Island.
-    /// Nothing else about those visits is disclosed.
+    /// The Chart calls this method while applying an accepted `Moor` action by
+    /// `requester`, after [`Island::moor`]. It is never called for a Ship whose
+    /// mooring was refused.
     ///
-    /// An Island may keep its internal history in any structure and is not
-    /// required to reveal every visit.
+    /// The map associates each described Ship with the rounds in which it moored
+    /// at this Island. Nothing else about those visits is disclosed. An Island may
+    /// keep its internal history in any structure and is not required to reveal
+    /// every visit.
+    ///
+    /// Every visit that is disclosed must be true: an Island cannot lie.
     ///
     /// # Contract
     ///
-    /// - `requester` is the Ship asking, not one of the Ships described.
-    /// - `requester` must not appear as a key: the service concerns its rivals.
+    /// - `requester` is the Ship asking, not one of the Ships described, and it
+    ///   must not appear as a key: the service concerns its rivals.
     /// - Each `Vec<Round>` is in ascending order.
     /// - Ships that have never moored here, or whose visits are not disclosed,
     ///   have no entry.
@@ -219,13 +248,12 @@ pub trait Island {
     ///
     /// # Returns
     ///
-    /// - `None`: the Island does not offer this service.
-    /// - `Some(map)`: the disclosed history. An empty map is a valid response.
-    ///
-    /// This method must not modify the Island's state.
-    ///
-    /// The default implementation returns `None`, since the service is optional.
-    fn ask_history(&self, _requester: ShipId) -> Option<BTreeMap<ShipId, Vec<Round>>> {
-        None
+    /// - [`OptionalServiceResponse::NotImplemented`]: the Island does not offer
+    ///   this service. This is the default.
+    /// - [`OptionalServiceResponse::Accepted`]: the disclosed history; an empty
+    ///   map is a valid answer.
+    /// - [`OptionalServiceResponse::Refused`]: the Island declines this request.
+    fn ask_history(&mut self, _requester: ShipId) -> HistoryResponse {
+        OptionalServiceResponse::NotImplemented
     }
 }
