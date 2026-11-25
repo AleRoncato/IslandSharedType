@@ -5,9 +5,9 @@
 //! are test-specific choices, not requirements for other island implementations.
 
 use std::collections::HashSet;
-
+use common_shared::Params;
 use island_trait::island::{Island, IslandInit, IslandResponse, MoorResponse};
-
+use island_trait::island::OptionalServiceResponse::NotImplemented;
 use island_trait::types::{Clue, Round, ShipId};
 
 // Minimal test implementation of the shared Island trait.
@@ -91,7 +91,7 @@ fn test_island_trait_object() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut mock = MockIsland::new(init);
@@ -107,12 +107,12 @@ fn test_default_ask_history() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
-    let mock = MockIsland::new(init);
+    let mut mock = MockIsland::new(init);
     let ship1 = ShipId(1);
-    assert_eq!(mock.ask_history(ship1), None);
+    assert_eq!(mock.ask_history(ship1), NotImplemented);
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn test_moor_lifecycle() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -155,7 +155,7 @@ fn test_wait_for_clue() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -196,7 +196,7 @@ fn test_round_advance_zero() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
     let ship1 = ShipId(1);
     let mut island = MockIsland::new(init);
@@ -227,7 +227,7 @@ fn test_multiple_ships() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let ship1 = ShipId(1);
@@ -272,7 +272,7 @@ fn test_can_moor_is_pure() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -291,7 +291,7 @@ fn test_leave_berth() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -315,14 +315,14 @@ fn test_default_repair_hull() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
     let ship1 = ShipId(1);
 
     // The default implementation does not offer hull repairs.
-    assert!(island.repair_hull(ship1).is_none());
+    assert_eq!(island.repair_hull(ship1), NotImplemented);
 }
 
 #[test]
@@ -330,7 +330,7 @@ fn test_has_more_to_offer_initial() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -351,7 +351,7 @@ fn test_leave_berth_wrong_ship() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);
@@ -375,7 +375,7 @@ fn test_wait_without_asking_clue() {
     let init = IslandInit {
         clue: TEST_CLUE,
         seed: 42,
-        params: Default::default(),
+        params: Params::default(),
     };
 
     let mut island = MockIsland::new(init);

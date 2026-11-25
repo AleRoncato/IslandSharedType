@@ -1,4 +1,3 @@
-use crate::island::OptionalServiceResponse::NotImplemented;
 use crate::types::{Clue, Params, Round, Seed, ShipId};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
@@ -46,7 +45,7 @@ impl OptionalServiceData for u32 {}
 /// The payload type `T` depends on the service: hull
 /// points for repairs, a mooring history for `ask_history`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OptionalServiceResponse<T: OptionalServiceData> {
     /// The Island does not offer this service at all.
     ///
